@@ -33,6 +33,24 @@ export function ChatWidget() {
     setSessionId(getSessionId());
   }, []);
 
+  function resetSession() {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    setSessionId(getSessionId());
+    setMessages([]);
+    setInput('');
+    setIntent(null);
+    setSlots({});
+    setShowLeadForm(false);
+    setLeadSubmitted(false);
+  }
+
+  function handleClose() {
+    if (leadSubmitted) resetSession();
+    setOpen(false);
+  }
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading, showLeadForm]);
@@ -112,7 +130,7 @@ export function ChatWidget() {
               <div className="text-xs opacity-90">Atsako per kelias sekundes</div>
             </div>
             <button
-              onClick={() => setOpen(false)}
+              onClick={handleClose}
               className="rounded p-1 transition hover:bg-white/15"
               aria-label="Uždaryti"
             >
