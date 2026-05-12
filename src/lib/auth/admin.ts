@@ -1,4 +1,3 @@
-import { createHmac, timingSafeEqual } from 'crypto';
 import { cookies } from 'next/headers';
 
 const COOKIE_NAME = 'kv_admin';
@@ -12,31 +11,49 @@ function getSecret(): string {
   return s;
 }
 
-function sign(payload: string): string {
-  return createHmac('sha256', getSecret()).update(payload).digest('hex');
+function toHex(buf: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-export function makeAdminToken(): string {
+async function importKey(): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  return crypto.subtle.importKey(
+    'raw',
+    enc.encode(getSecret()),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+}
+
+async function sign(payload: string): Promise<string> {
+  const key = await importKey();
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return toHex(sig);
+}
+
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+export async function makeAdminToken(): Promise<string> {
   const issued = Date.now().toString();
-  const sig = sign(issued);
+  const sig = await sign(issued);
   return `${issued}.${sig}`;
 }
 
-export function verifyAdminToken(token: string | undefined): boolean {
+export async function verifyAdminToken(token: string | undefined): Promise<boolean> {
   if (!token) return false;
   const [issuedStr, sig] = token.split('.');
   if (!issuedStr || !sig) return false;
 
-  const expected = sign(issuedStr);
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-
-  try {
-    if (!timingSafeEqual(a, b)) return false;
-  } catch {
-    return false;
-  }
+  const expected = await sign(issuedStr);
+  if (!timingSafeEqualHex(sig, expected)) return false;
 
   const issued = Number(issuedStr);
   if (!Number.isFinite(issued)) return false;
@@ -46,7 +63,7 @@ export function verifyAdminToken(token: string | undefined): boolean {
 
 export async function setAdminCookie() {
   const store = await cookies();
-  store.set(COOKIE_NAME, makeAdminToken(), {
+  store.set(COOKIE_NAME, await makeAdminToken(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
