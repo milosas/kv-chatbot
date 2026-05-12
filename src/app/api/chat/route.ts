@@ -55,7 +55,14 @@ export async function POST(req: Request) {
       slotData: mergedSlots,
     });
 
-    const showLeadForm = Boolean(slotUpdate.ready_for_contact) && slotUpdate.state !== 'done';
+    const replyLower = reply.toLowerCase();
+    const replyTriggersForm =
+      (replyLower.includes('atsivers') && replyLower.includes('anketa')) ||
+      replyLower.includes('užpildykite') ||
+      replyLower.includes('uzpildykite');
+    const showLeadForm =
+      (replyTriggersForm || Boolean(slotUpdate.ready_for_contact)) &&
+      slotUpdate.state !== 'done';
 
     return NextResponse.json({
       message: reply,
