@@ -87,15 +87,19 @@ export function ChatWidget() {
     <>
       {/* Floating button */}
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-brand-primary text-white shadow-xl transition hover:scale-105 hover:bg-brand-dark"
-          aria-label="Atidaryti pokalbį"
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        </button>
+        <div className="fixed bottom-6 right-6 z-50">
+          <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-brand-primary/40" />
+          <button
+            onClick={() => setOpen(true)}
+            className="relative flex h-16 w-16 animate-kv-wiggle items-center justify-center rounded-full bg-brand-primary text-white shadow-xl shadow-brand-primary/40 transition hover:scale-110 hover:bg-brand-dark"
+            aria-label="Atidaryti pokalbį"
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow">1</span>
+          </button>
+        </div>
       )}
 
       {/* Chat panel */}
