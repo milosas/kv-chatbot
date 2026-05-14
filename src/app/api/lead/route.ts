@@ -75,10 +75,15 @@ export async function POST(req: Request) {
     const result = await sendManagerEmail({ subject, html, text });
 
     if (result.ok) {
-      await updateLeadEmailStatus(lead.id, 'sent');
+      const note: string[] = [];
+      if (result.rejected.length) note.push(`rejected: ${result.rejected.join(', ')}`);
+      if (result.blacklisted.length) note.push(`blacklisted: ${result.blacklisted.join(', ')}`);
+      await updateLeadEmailStatus(lead.id, 'sent', note.length ? `Partial — ${note.join('; ')}` : undefined);
     } else {
-      await updateLeadEmailStatus(lead.id, 'failed', result.error);
-      console.error('Email send failed:', result.error);
+      const note: string[] = [result.error];
+      if (result.blacklisted.length) note.push(`blacklisted: ${result.blacklisted.join(', ')}`);
+      await updateLeadEmailStatus(lead.id, 'failed', note.join(' | '));
+      console.error('Email send failed:', note.join(' | '));
     }
 
     return NextResponse.json({

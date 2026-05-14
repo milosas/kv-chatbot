@@ -1,6 +1,8 @@
 import { db } from './index';
-import { conversations, messages, leads, type NewLead } from './schema';
-import { eq, desc } from 'drizzle-orm';
+import { conversations, messages, leads, emailRecipientStatus, type NewLead } from './schema';
+import { eq, desc, sql } from 'drizzle-orm';
+
+const BLACKLIST_THRESHOLD = 2;
 
 export async function findOrCreateConversation(sessionId: string) {
   const existing = await db
@@ -78,4 +80,55 @@ export async function listLeads() {
 export async function getLeadById(leadId: string) {
   const rows = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
   return rows[0] || null;
+}
+
+export async function getBlacklistedRecipients(): Promise<string[]> {
+  const rows = await db
+    .select({ email: emailRecipientStatus.email })
+    .from(emailRecipientStatus)
+    .where(eq(emailRecipientStatus.blacklisted, true));
+  return rows.map((r) => r.email);
+}
+
+export async function recordRecipientFailure(email: string, error: string) {
+  await db
+    .insert(emailRecipientStatus)
+    .values({
+      email,
+      failCount: 1,
+      lastFailedAt: new Date(),
+      lastError: error,
+      blacklisted: false,
+    })
+    .onConflictDoUpdate({
+      target: emailRecipientStatus.email,
+      set: {
+        failCount: sql`${emailRecipientStatus.failCount} + 1`,
+        lastFailedAt: new Date(),
+        lastError: error,
+        blacklisted: sql`(${emailRecipientStatus.failCount} + 1) >= ${BLACKLIST_THRESHOLD}`,
+        blacklistedAt: sql`CASE WHEN (${emailRecipientStatus.failCount} + 1) >= ${BLACKLIST_THRESHOLD} AND ${emailRecipientStatus.blacklisted} = false THEN NOW() ELSE ${emailRecipientStatus.blacklistedAt} END`,
+        updatedAt: new Date(),
+      },
+    });
+}
+
+export async function recordRecipientSuccess(email: string) {
+  await db
+    .insert(emailRecipientStatus)
+    .values({
+      email,
+      failCount: 0,
+      blacklisted: false,
+    })
+    .onConflictDoUpdate({
+      target: emailRecipientStatus.email,
+      set: {
+        failCount: 0,
+        blacklisted: false,
+        blacklistedAt: null,
+        lastError: null,
+        updatedAt: new Date(),
+      },
+    });
 }

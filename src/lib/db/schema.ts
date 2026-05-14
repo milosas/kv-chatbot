@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, jsonb, bigserial } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, jsonb, bigserial, integer, boolean } from 'drizzle-orm/pg-core';
 
 export const conversations = pgTable('conversations', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -44,7 +44,19 @@ export const leads = pgTable('leads', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const emailRecipientStatus = pgTable('email_recipient_status', {
+  email: text('email').primaryKey(),
+  failCount: integer('fail_count').notNull().default(0),
+  lastFailedAt: timestamp('last_failed_at'),
+  lastError: text('last_error'),
+  blacklisted: boolean('blacklisted').notNull().default(false),
+  blacklistedAt: timestamp('blacklisted_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export type Conversation = typeof conversations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
+export type EmailRecipientStatus = typeof emailRecipientStatus.$inferSelect;
