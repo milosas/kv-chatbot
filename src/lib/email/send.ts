@@ -97,10 +97,19 @@ export async function sendManagerEmail({ to, subject, html, text }: SendArgs): P
       }
     }
 
+    if (effectiveAccepted.length > 0) {
+      return {
+        ok: true,
+        id: info.messageId || 'unknown',
+        accepted: effectiveAccepted,
+        rejected: effectiveRejected,
+        blacklisted: blacklistedHits,
+      };
+    }
     return {
-      ok: effectiveAccepted.length > 0,
-      id: info.messageId || 'unknown',
-      accepted: effectiveAccepted,
+      ok: false,
+      error: `All recipients rejected: ${effectiveRejected.join(', ') || '(none reported)'}`,
+      accepted: [],
       rejected: effectiveRejected,
       blacklisted: blacklistedHits,
     };
